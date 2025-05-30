@@ -3,3 +3,4 @@ pytubefix
 speechbrain
 moviepy
 imageio-ffmpeg
+librosa
