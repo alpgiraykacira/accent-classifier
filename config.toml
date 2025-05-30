@@ -1,0 +1,6 @@
+[server]
+runOnSave = false
+
+[runner]
+fileWatcherType = "poll"
+excludedWatchPaths = ["venv/*", "*/site-packages/*"]
