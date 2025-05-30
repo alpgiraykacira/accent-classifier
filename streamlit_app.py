@@ -7,7 +7,14 @@ import tempfile
 import streamlit as st
 from pytubefix import YouTube
 from moviepy import VideoFileClip
+import torchaudio
 from speechbrain.pretrained import EncoderClassifier
+
+# Ensure torchaudio uses the soundfile backend for WAV support
+try:
+    torchaudio.set_audio_backend("soundfile")
+except Exception:
+    pass
 
 # Descriptions for each accent label
 ACCENT_DESCRIPTIONS = {
@@ -66,7 +73,13 @@ if st.button("Analyze") and url:
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
-        _, pred_prob, _, labels = model.classify_file(wav_path, format="wav")
+        # Load and classify using SpeechBrain
+        waveform, sample_rate = torchaudio.load(wav_path)
+        batch = waveform.unsqueeze(0)
+        lengths = None
+        results = model.classify_batch(batch, lengths)
+        # results = (probs, predicted_prob, predicted_id, labels)
+        _, pred_prob, _, labels = results
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
         description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
