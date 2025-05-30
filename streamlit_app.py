@@ -3,16 +3,25 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import os
+import shutil
 import streamlit as st
 from pytubefix import YouTube
 from moviepy import VideoFileClip
 from speechbrain.pretrained import EncoderClassifier
 import torchaudio
 
-# Explicitly set backend
 torchaudio.set_audio_backend("ffmpeg")
 
-# Rest of your existing Streamlit code...
+# Accent descriptions
+ACCENT_DESCRIPTIONS = {
+    "african": "Pan-African accent...",
+    # Include the rest of your descriptions...
+    "us": "General American accent."
+}
+
+st.set_page_config(page_title="Accent Classifier", layout="centered")
+st.title("🎙️ English-Accent Classifier")
+
 url = st.text_input("Enter a public video URL (e.g., Loom, YouTube)")
 
 if st.button("Analyze") and url:
@@ -32,7 +41,7 @@ if st.button("Analyze") and url:
         clip.audio.write_audiofile(audio_path)
         clip.close()
 
-    # Verify FFMPEG availability (optional, helpful debugging)
+    # Verify FFMPEG
     if not shutil.which("ffmpeg"):
         st.error("FFmpeg is not available, cannot process audio.")
         st.stop()
@@ -46,12 +55,14 @@ if st.button("Analyze") and url:
         _, pred_prob, _, labels = model.classify_file(audio_path)
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
+        description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
 
     # Display results
     st.success("✅ Done!")
     st.markdown(f"**Accent:** {accent.capitalize()}")
     st.markdown(f"**Confidence:** {confidence:.1f}%")
+    st.markdown(f"**Info:** {description}")
 
-    # Clean up files
+    # Clean up
     os.remove(video_path)
     os.remove(audio_path)
