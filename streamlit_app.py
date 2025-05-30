@@ -7,10 +7,11 @@ import warnings
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import tempfile
+import io
 import streamlit as st
 from pytubefix import YouTube
-from moviepy import VideoFileClip
+import requests
+from pydub import AudioSegment
 import librosa
 import torch
 from speechbrain.pretrained import EncoderClassifier
@@ -20,18 +21,18 @@ ACCENT_DESCRIPTIONS = {
     "african":     "A pan-African English accent, often influenced by local rhythms and vowel shifts across multiple countries.",
     "australia":   "Australian English, characterized by broad vowel sounds and a distinctive rising inflection.",
     "bermuda":     "Bermudian English, mixing British RP influences with Caribbean and island-local intonations.",
-    "canada":      "General Canadian English, similar to General American but with the “eh” tag and some unique vowel qualities.",
-    "england":     "Standard British (Received Pronunciation), featuring non-rhoticity (dropping of ‘r’ sounds).",
+    "canada":      "General Canadian English, similar to General American but with the 'eh' tag and some unique vowel qualities.",
+    "england":     "Standard British (Received Pronunciation), featuring non-rhoticity (dropping of 'r' sounds).",
     "hongkong":    "Hong Kong English, with Cantonese-influenced intonation and syllable timing.",
     "indian":      "Indian English, marked by retroflex consonants and syllable-timed rhythm patterns.",
-    "ireland":     "Irish English, often singsongy with distinct diphthongs and rhotic ‘r’s.",
+    "ireland":     "Irish English, often singsongy with distinct diphthongs and rhotic 'r's.",
     "malaysia":    "Malaysian English (Manglish), influenced by Malay and Chinese tonal patterns.",
-    "newzealand":  "New Zealand English, with a very “flat” vowel space (e.g. the KIT vowel sounds like “ket”).",
+    "newzealand":  "New Zealand English, with a very flat vowel space (e.g., KIT sounds like 'ket').",
     "philippines": "Philippine English, with syllable timing drawn from Tagalog and other local languages.",
-    "scotland":    "Scottish English, featuring rolled ‘r’s and Scots vocabulary borrowings.",
+    "scotland":    "Scottish English, featuring rolled 'r's and Scots vocabulary borrowings.",
     "singapore":   "Singaporean English (Singlish), blending British structure with Cantonese, Malay, and Tamil cadence.",
-    "southatlandtic": "South Atlantic (e.g. Falklands) English, a rarer island dialect mixing British and maritime influences.",
-    "us":          "General North American (General American), rhotic with flattened “o” sounds.",
+    "southatlandtic": "South Atlantic (e.g., Falklands) English, a rare island dialect mixing British and maritime influences.",
+    "us":          "General North American (General American), rhotic with flattened 'o' sounds.",
     "wales":       "Welsh English, characterized by melodic pitch changes influenced by the Welsh language."
 }
 
@@ -39,33 +40,28 @@ ACCENT_DESCRIPTIONS = {
 st.set_page_config(page_title="Accent Classifier", layout="centered")
 st.title("🎙️ English-Accent Classifier")
 
-# Input field for video URL
-url = st.text_input("Enter a public video URL (e.g., Loom, YouTube)")
+url = st.text_input("Enter a public video URL (e.g., YouTube, Loom)")
 
 if st.button("Analyze") and url:
-    temp_dir = None
     try:
-        # Create a temporary workspace
-        temp_dir = tempfile.mkdtemp()
-
-        # Download video
-        with st.spinner("Downloading video…"):
+        with st.spinner("Downloading and buffering video…"):
             yt = YouTube(url)
-            video_path = yt.streams.get_highest_resolution().download(
-                output_path=temp_dir,
-                filename="video.mp4"
-            )
+            stream_url = yt.streams.get_lowest_resolution().url
+            response = requests.get(stream_url, stream=True)
+            video_buffer = io.BytesIO()
+            for chunk in response.iter_content(1024*64):
+                if chunk:
+                    video_buffer.write(chunk)
+            video_buffer.seek(0)
 
-        # Extract audio as WAV
-        with st.spinner("Extracting audio…"):
-            wav_path = os.path.join(temp_dir, "audio.wav")
-            clip = VideoFileClip(video_path)
-            clip.audio.write_audiofile(wav_path)
-            clip.close()
+        with st.spinner("Extracting audio in-memory…"):
+            audio = AudioSegment.from_file(video_buffer, format="mp4")
+            wav_buffer = io.BytesIO()
+            audio.export(wav_buffer, format="wav")
+            wav_buffer.seek(0)
 
-        # Classify accent using librosa
-        with st.spinner("Classifying accent…"):
-            waveform_np, sr = librosa.load(wav_path, sr=None)
+        with st.spinner("Processing and classifying accent…"):
+            waveform_np, sr = librosa.load(wav_buffer, sr=None)
             waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
             model = EncoderClassifier.from_hparams(
                 source="Jzuluaga/accent-id-commonaccent_ecapa",
@@ -76,20 +72,10 @@ if st.button("Analyze") and url:
             confidence = float(pred_prob[0]) * 100
             description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
 
-        # Display results
-        st.success("✅ Done!")
+        st.success("✅ Completed!")
         st.markdown(f"**Accent:** {accent.capitalize()}")
         st.markdown(f"**Confidence:** {confidence:.1f}%")
         st.markdown(f"**Info:** {description}")
 
     except Exception as e:
-        st.error(f"An unexpected error occurred: {e}")
-    finally:
-        # Clean up temporary files and directory
-        if temp_dir:
-            try:
-                for fname in os.listdir(temp_dir):
-                    os.remove(os.path.join(temp_dir, fname))
-                os.rmdir(temp_dir)
-            except Exception:
-                pass
+        st.error(f"Error during processing: {e}")
