@@ -1,5 +1,5 @@
-sentencepiece>=0.1.99
 streamlit
 pytubefix
-moviepy
 speechbrain
+moviepy
+imageio-ffmpeg
