@@ -50,7 +50,6 @@ if st.button("Analyze") and url:
             )
         except Exception as e:
             st.error(f"Download failed: {e}")
-            # Clean up temp dir
             os.rmdir(temp_dir)
             st.stop()
 
@@ -67,8 +66,7 @@ if st.button("Analyze") and url:
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
-        # Use the cleaned WAV file
-        _, pred_prob, _, labels = model.classify_file(wav_path)
+        _, pred_prob, _, labels = model.classify_file(wav_path, format="wav")
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
         description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
