@@ -1,7 +1,8 @@
 streamlit
 pytubefix
-speechbrain
-moviepy
+requests
+pydub
 imageio-ffmpeg
 librosa
-pydub
+torch
+speechbrain

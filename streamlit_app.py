@@ -8,13 +8,20 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import io
+tempfile
 import streamlit as st
 from pytubefix import YouTube
 import requests
 from pydub import AudioSegment
+from imageio_ffmpeg import get_ffmpeg_exe
 import librosa
 import torch
 from speechbrain.pretrained import EncoderClassifier
+
+# Configure pydub to use bundled ffmpeg
+FFMPEG_PATH = get_ffmpeg_exe()
+AudioSegment.converter = FFMPEG_PATH
+AudioSegment.ffprobe = FFMPEG_PATH
 
 # Descriptions for each accent label
 ACCENT_DESCRIPTIONS = {
@@ -46,7 +53,7 @@ if st.button("Analyze") and url:
     try:
         with st.spinner("Downloading and buffering video…"):
             yt = YouTube(url)
-            stream_url = yt.streams.get_lowest_resolution().url
+            stream_url = yt.streams.get_highest_resolution().url
             response = requests.get(stream_url, stream=True)
             video_buffer = io.BytesIO()
             for chunk in response.iter_content(1024*64):
