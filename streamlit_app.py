@@ -8,6 +8,9 @@ from pytubefix import YouTube
 from moviepy import VideoFileClip
 from speechbrain.pretrained import EncoderClassifier
 
+import asyncio
+asyncio.set_event_loop(asyncio.new_event_loop())
+
 # Descriptions for each accent label
 ACCENT_DESCRIPTIONS = {
     "african":     "A pan-African English accent, often influenced by local rhythms and vowel shifts across multiple countries.",
