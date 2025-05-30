@@ -4,3 +4,4 @@ speechbrain
 moviepy
 imageio-ffmpeg
 librosa
+pydub
