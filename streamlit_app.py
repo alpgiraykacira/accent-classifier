@@ -33,62 +33,59 @@ ACCENT_DESCRIPTIONS = {
 
 # Streamlit UI configuration
 st.set_page_config(page_title="Accent Classifier", layout="centered")
-stitle = "🎙️ English-Accent Classifier"
-st.title(stitle)
+st.title("🎙️ English-Accent Classifier")
 
 # Input field for video URL
 url = st.text_input("Enter a public video URL (e.g., Loom, YouTube)")
 
 if st.button("Analyze") and url:
-    # Create a temporary workspace
-    temp_dir = tempfile.mkdtemp()
+    temp_dir = None
+    try:
+        # Create a temporary workspace
+        temp_dir = tempfile.mkdtemp()
 
-    # Download video
-    with st.spinner("Downloading video…"):
-        try:
+        # Download video
+        with st.spinner("Downloading video…"):
             yt = YouTube(url)
             video_path = yt.streams.get_highest_resolution().download(
                 output_path=temp_dir,
                 filename="video.mp4"
             )
-        except Exception as e:
-            st.error(f"Download failed: {e}")
-            os.rmdir(temp_dir)
-            st.stop()
 
-    # Extract audio as WAV
-    with st.spinner("Extracting audio…"):
-        wav_path = os.path.join(temp_dir, "audio.wav")
-        clip = VideoFileClip(video_path)
-        clip.audio.write_audiofile(wav_path)
-        clip.close()
+        # Extract audio as WAV
+        with st.spinner("Extracting audio…"):
+            wav_path = os.path.join(temp_dir, "audio.wav")
+            clip = VideoFileClip(video_path)
+            clip.audio.write_audiofile(wav_path)
+            clip.close()
 
-    # Classify accent using librosa
-    with st.spinner("Classifying accent…"):
-        # Load waveform with librosa
-        waveform_np, sr = librosa.load(wav_path, sr=None)
-        waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
-        # Initialize model
-        model = EncoderClassifier.from_hparams(
-            source="Jzuluaga/accent-id-commonaccent_ecapa",
-            run_opts={"device": "cpu"}
-        )
-        # Classify batch
-        scores, pred_prob, _, labels = model.classify_batch(waveform)
-        accent = labels[0]
-        confidence = float(pred_prob[0]) * 100
-        description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
+        # Classify accent using librosa
+        with st.spinner("Classifying accent…"):
+            waveform_np, sr = librosa.load(wav_path, sr=None)
+            waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
+            model = EncoderClassifier.from_hparams(
+                source="Jzuluaga/accent-id-commonaccent_ecapa",
+                run_opts={"device": "cpu"}
+            )
+            scores, pred_prob, _, labels = model.classify_batch(waveform)
+            accent = labels[0]
+            confidence = float(pred_prob[0]) * 100
+            description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
 
-    # Display results
-    st.success("✅ Done!")
-    st.markdown(f"**Accent:** {accent.capitalize()}")
-    st.markdown(f"**Confidence:** {confidence:.1f}%")
-    st.markdown(f"**Info:** {description}")
+        # Display results
+        st.success("✅ Done!")
+        st.markdown(f"**Accent:** {accent.capitalize()}")
+        st.markdown(f"**Confidence:** {confidence:.1f}%")
+        st.markdown(f"**Info:** {description}")
 
-    # Clean up
-    try:
-        os.remove(video_path)
-        os.remove(wav_path)
-        os.rmdir(temp_dir)
-    except OSError:
-        pass
+    except Exception as e:
+        st.error(f"An unexpected error occurred: {e}")
+    finally:
+        # Clean up temporary files and directory
+        if temp_dir:
+            try:
+                for fname in os.listdir(temp_dir):
+                    os.remove(os.path.join(temp_dir, fname))
+                os.rmdir(temp_dir)
+            except Exception:
+                pass
