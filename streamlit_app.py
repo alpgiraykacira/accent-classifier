@@ -7,14 +7,9 @@ import tempfile
 import streamlit as st
 from pytubefix import YouTube
 from moviepy import VideoFileClip
-import torchaudio
+import librosa
+import torch
 from speechbrain.pretrained import EncoderClassifier
-
-# Ensure torchaudio uses the soundfile backend for WAV support
-try:
-    torchaudio.set_audio_backend("soundfile")
-except Exception:
-    pass
 
 # Descriptions for each accent label
 ACCENT_DESCRIPTIONS = {
@@ -38,7 +33,8 @@ ACCENT_DESCRIPTIONS = {
 
 # Streamlit UI configuration
 st.set_page_config(page_title="Accent Classifier", layout="centered")
-st.title("🎙️ English-Accent Classifier")
+stitle = "🎙️ English-Accent Classifier"
+st.title(stitle)
 
 # Input field for video URL
 url = st.text_input("Enter a public video URL (e.g., Loom, YouTube)")
@@ -47,7 +43,7 @@ if st.button("Analyze") and url:
     # Create a temporary workspace
     temp_dir = tempfile.mkdtemp()
 
-    # Download video to a safe filename
+    # Download video
     with st.spinner("Downloading video…"):
         try:
             yt = YouTube(url)
@@ -60,26 +56,25 @@ if st.button("Analyze") and url:
             os.rmdir(temp_dir)
             st.stop()
 
-    # Extract audio as WAV for classification
+    # Extract audio as WAV
     with st.spinner("Extracting audio…"):
         wav_path = os.path.join(temp_dir, "audio.wav")
         clip = VideoFileClip(video_path)
         clip.audio.write_audiofile(wav_path)
         clip.close()
 
-    # Classify accent on WAV
+    # Classify accent using librosa
     with st.spinner("Classifying accent…"):
+        # Load waveform with librosa
+        waveform_np, sr = librosa.load(wav_path, sr=None)
+        waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
+        # Initialize model
         model = EncoderClassifier.from_hparams(
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
-        # Load and classify using SpeechBrain
-        waveform, sample_rate = torchaudio.load(wav_path)
-        batch = waveform.unsqueeze(0)
-        lengths = None
-        results = model.classify_batch(batch, lengths)
-        # results = (probs, predicted_prob, predicted_id, labels)
-        _, pred_prob, _, labels = results
+        # Classify batch
+        scores, pred_prob, _, labels = model.classify_batch(waveform)
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
         description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
@@ -90,7 +85,7 @@ if st.button("Analyze") and url:
     st.markdown(f"**Confidence:** {confidence:.1f}%")
     st.markdown(f"**Info:** {description}")
 
-    # Clean up temporary files and directory
+    # Clean up
     try:
         os.remove(video_path)
         os.remove(wav_path)
