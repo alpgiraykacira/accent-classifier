@@ -19,7 +19,7 @@ ACCENT_DESCRIPTIONS = {
     "indian":      "Indian English, marked by retroflex consonants and syllable-timed rhythm patterns.",
     "ireland":     "Irish English, often singsongy with distinct diphthongs and rhotic ‘r’s.",
     "malaysia":    "Malaysian English (Manglish), influenced by Malay and Chinese tonal patterns.",
-    "newzealand":  "New Zealand English, with a very “flat” vowel space (e.g. the KIT vowel sounds like “ket”).",
+    "newzealand":  "New Zealand English, with a very “flat” vowel space (e.g. the KIT vowel sounds like “ket”).",
     "philippines": "Philippine English, with syllable timing drawn from Tagalog and other local languages.",
     "scotland":    "Scottish English, featuring rolled ‘r’s and Scots vocabulary borrowings.",
     "singapore":   "Singaporean English (Singlish), blending British structure with Cantonese, Malay, and Tamil cadence.",
@@ -45,20 +45,20 @@ if st.button("Analyze") and url:
             st.error(f"Download failed: {e}")
             st.stop()
 
-    # Extract audio as MP3
+    # Extract audio as WAV for classification
     with st.spinner("Extracting audio…"):
-        audio_path = os.path.splitext(video_path)[0] + ".mp3"
+        wav_path = os.path.splitext(video_path)[0] + ".wav"
         clip = VideoFileClip(video_path)
-        clip.audio.write_audiofile(audio_path, codec="mp3")
+        clip.audio.write_audiofile(wav_path)
         clip.close()
 
-    # Classify accent
+    # Classify accent on WAV
     with st.spinner("Classifying accent…"):
         model = EncoderClassifier.from_hparams(
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
-        _, pred_prob, _, labels = model.classify_file(audio_path)
+        _, pred_prob, _, labels = model.classify_file(wav_path)
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
         description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
@@ -69,6 +69,6 @@ if st.button("Analyze") and url:
     st.markdown(f"**Confidence:** {confidence:.1f}%")
     st.markdown(f"**Info:** {description}")
 
-    # Clean up files
+    # Clean up temporary files
     os.remove(video_path)
-    os.remove(audio_path)
+    os.remove(wav_path)
