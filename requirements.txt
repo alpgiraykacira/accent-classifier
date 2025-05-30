@@ -1,8 +1,5 @@
 streamlit
 pytubefix
 requests
-pydub
-imageio-ffmpeg
-librosa
-torch
 speechbrain
+moviepy
