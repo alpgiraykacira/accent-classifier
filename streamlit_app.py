@@ -8,7 +8,6 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import io
-tempfile
 import streamlit as st
 from pytubefix import YouTube
 import requests
