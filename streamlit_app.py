@@ -3,6 +3,7 @@ warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 import os
+import tempfile
 import streamlit as st
 from pytubefix import YouTube
 from moviepy import VideoFileClip
@@ -36,18 +37,26 @@ st.title("🎙️ English-Accent Classifier")
 url = st.text_input("Enter a public video URL (e.g., Loom, YouTube)")
 
 if st.button("Analyze") and url:
-    # Download video
+    # Create a temporary workspace
+    temp_dir = tempfile.mkdtemp()
+
+    # Download video to a safe filename
     with st.spinner("Downloading video…"):
         try:
             yt = YouTube(url)
-            video_path = yt.streams.get_highest_resolution().download()
+            video_path = yt.streams.get_highest_resolution().download(
+                output_path=temp_dir,
+                filename="video.mp4"
+            )
         except Exception as e:
             st.error(f"Download failed: {e}")
+            # Clean up temp dir
+            os.rmdir(temp_dir)
             st.stop()
 
     # Extract audio as WAV for classification
     with st.spinner("Extracting audio…"):
-        wav_path = os.path.splitext(video_path)[0] + ".wav"
+        wav_path = os.path.join(temp_dir, "audio.wav")
         clip = VideoFileClip(video_path)
         clip.audio.write_audiofile(wav_path)
         clip.close()
@@ -58,6 +67,7 @@ if st.button("Analyze") and url:
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
+        # Use the cleaned WAV file
         _, pred_prob, _, labels = model.classify_file(wav_path)
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
@@ -69,6 +79,10 @@ if st.button("Analyze") and url:
     st.markdown(f"**Confidence:** {confidence:.1f}%")
     st.markdown(f"**Info:** {description}")
 
-    # Clean up temporary files
-    os.remove(video_path)
-    os.remove(wav_path)
+    # Clean up temporary files and directory
+    try:
+        os.remove(video_path)
+        os.remove(wav_path)
+        os.rmdir(temp_dir)
+    except OSError:
+        pass
