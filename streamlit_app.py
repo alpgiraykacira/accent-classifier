@@ -47,7 +47,7 @@ if st.button("Analyze") and url:
         # Download video
         with st.spinner("Downloading video…"):
             yt = YouTube(url)
-            video_path = yt.streams.get_highest_resolution().download(
+            video_path = yt.streams.get_lowest_resolution().download(
                 output_path=temp_dir,
                 filename="video.mp4"
             )
