@@ -3,4 +3,10 @@ runOnSave = false
 
 [runner]
 fileWatcherType = "poll"
-excludedWatchPaths = ["venv/*", "*/site-packages/*", "env/*"]
+excludedWatchPaths = [
+  "venv/*",
+  "env/*",
+  "*/site-packages/*",
+  # You can even target torch explicitly:
+  "**/site-packages/torch/**"
+]

@@ -42,8 +42,9 @@ if st.button("Analyze") and url:
         clip.audio.write_audiofile(audio_path)
         clip.close()
 
-    # Load audio using soundfile
+    # Load audio as NumPy array, then convert to Torch tensor
     signal, sr = sf.read(audio_path, dtype='float32')
+    signal = torch.from_numpy(signal).unsqueeze(0)  # Add batch dimension
 
     # Classify accent
     with st.spinner("Classifying accent…"):
