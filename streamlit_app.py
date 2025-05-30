@@ -64,8 +64,7 @@ if st.button("Analyze") and url:
             waveform_np, sr = librosa.load(wav_path, sr=None)
             waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
             model = EncoderClassifier.from_hparams(
-                source="Jzuluaga/accent-id-commonaccent_ecapa",
-                run_opts={"device": "cpu"}
+                source="Jzuluaga/accent-id-commonaccent_ecapa"
             )
             scores, pred_prob, _, labels = model.classify_batch(waveform)
             accent = labels[0]
