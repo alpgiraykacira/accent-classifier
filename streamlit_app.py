@@ -5,7 +5,7 @@ warnings.filterwarnings("ignore", category=UserWarning)
 import os
 import streamlit as st
 from pytubefix import YouTube
-from moviepy.editor import VideoFileClip
+from moviepy import VideoFileClip
 from speechbrain.pretrained import EncoderClassifier
 
 # Descriptions for each accent label
