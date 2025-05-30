@@ -9,6 +9,7 @@ from pytubefix import YouTube
 from moviepy import VideoFileClip
 from speechbrain.pretrained import EncoderClassifier
 import torchaudio
+import soundfile as sf
 
 torchaudio.set_audio_backend("ffmpeg")
 
@@ -41,10 +42,8 @@ if st.button("Analyze") and url:
         clip.audio.write_audiofile(audio_path)
         clip.close()
 
-    # Verify FFMPEG
-    if not shutil.which("ffmpeg"):
-        st.error("FFmpeg is not available, cannot process audio.")
-        st.stop()
+    # Load audio using soundfile
+    signal, sr = sf.read(audio_path, dtype='float32')
 
     # Classify accent
     with st.spinner("Classifying accent…"):
@@ -52,7 +51,7 @@ if st.button("Analyze") and url:
             source="Jzuluaga/accent-id-commonaccent_ecapa",
             run_opts={"device": "cpu"}
         )
-        _, pred_prob, _, labels = model.classify_file(audio_path)
+        _, pred_prob, _, labels = model.classify_batch(signal)
         accent = labels[0]
         confidence = float(pred_prob[0]) * 100
         description = ACCENT_DESCRIPTIONS.get(accent, "No description available.")
@@ -63,6 +62,6 @@ if st.button("Analyze") and url:
     st.markdown(f"**Confidence:** {confidence:.1f}%")
     st.markdown(f"**Info:** {description}")
 
-    # Clean up
+    # Clean up files
     os.remove(video_path)
     os.remove(audio_path)
