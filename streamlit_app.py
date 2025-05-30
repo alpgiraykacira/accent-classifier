@@ -1,8 +1,12 @@
+import os
+# Disable Streamlit file-watcher to avoid torch.classes warnings
+os.environ["STREAMLIT_SERVER_FILE_WATCHER_TYPE"] = "none"
+os.environ["STREAMLIT_SERVER_RUN_ON_SAVE"] = "false"
+
 import warnings
 warnings.filterwarnings("ignore", category=SyntaxWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-import os
 import tempfile
 import streamlit as st
 from pytubefix import YouTube
@@ -47,7 +51,7 @@ if st.button("Analyze") and url:
         # Download video
         with st.spinner("Downloading video…"):
             yt = YouTube(url)
-            video_path = yt.streams.get_lowest_resolution().download(
+            video_path = yt.streams.get_highest_resolution().download(
                 output_path=temp_dir,
                 filename="video.mp4"
             )
@@ -64,7 +68,8 @@ if st.button("Analyze") and url:
             waveform_np, sr = librosa.load(wav_path, sr=None)
             waveform = torch.from_numpy(waveform_np).float().unsqueeze(0)
             model = EncoderClassifier.from_hparams(
-                source="Jzuluaga/accent-id-commonaccent_ecapa"
+                source="Jzuluaga/accent-id-commonaccent_ecapa",
+                run_opts={"device": "cpu"}
             )
             scores, pred_prob, _, labels = model.classify_batch(waveform)
             accent = labels[0]
