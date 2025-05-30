@@ -10,6 +10,7 @@ from moviepy import VideoFileClip
 from speechbrain.pretrained import EncoderClassifier
 import torchaudio
 import soundfile as sf
+import torch
 
 torchaudio.set_audio_backend("ffmpeg")
 
