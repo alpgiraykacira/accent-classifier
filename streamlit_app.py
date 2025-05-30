@@ -19,7 +19,7 @@ ACCENT_DESCRIPTIONS = {
     "indian":      "Indian English, marked by retroflex consonants and syllable-timed rhythm patterns.",
     "ireland":     "Irish English, often singsongy with distinct diphthongs and rhotic ‘r’s.",
     "malaysia":    "Malaysian English (Manglish), influenced by Malay and Chinese tonal patterns.",
-    "newzealand":  "New Zealand English, with a very “flat” vowel space (e.g. the KIT vowel sounds like “ket”).",
+    "newzealand":  "New Zealand English, with a very “flat” vowel space (e.g. the KIT vowel sounds like “ket”).",
     "philippines": "Philippine English, with syllable timing drawn from Tagalog and other local languages.",
     "scotland":    "Scottish English, featuring rolled ‘r’s and Scots vocabulary borrowings.",
     "singapore":   "Singaporean English (Singlish), blending British structure with Cantonese, Malay, and Tamil cadence.",
@@ -45,11 +45,11 @@ if st.button("Analyze") and url:
             st.error(f"Download failed: {e}")
             st.stop()
 
-    # Extract audio
+    # Extract audio as MP3
     with st.spinner("Extracting audio…"):
-        audio_path = os.path.splitext(video_path)[0] + ".wav"
+        audio_path = os.path.splitext(video_path)[0] + ".mp3"
         clip = VideoFileClip(video_path)
-        clip.audio.write_audiofile(audio_path)
+        clip.audio.write_audiofile(audio_path, codec="mp3")
         clip.close()
 
     # Classify accent
